@@ -47,18 +47,19 @@ for funcs in bv.functions:
     mlil = funcs.mlil_instructions
     ecx_source = 0
     ecx_dest = 0
-    for mlil_ins in mlil:
-        if mlil_ins.operation == MediumLevelILOperation.MLIL_SET_VAR :
-            if mlil_ins.src.value.reg == 'ecx':
-                if ecx_dest ==1:
-                    ecx_dest =0
-                    break
-                else:
-                    count+=1
-                    print "Found a thiscall at %s"%(funcs.symbol.full_name)
-                    ecx_dest = 0
-                    break
-            if mlil_ins.dest == 'ecx':
-                ecx_dest =1
+    if funcs.calling_convention.name == 'cdecl' :
+        for mlil_ins in mlil:
+            if mlil_ins.operation == MediumLevelILOperation.MLIL_SET_VAR :
+                if mlil_ins.src.value.reg == 'ecx':
+                    if ecx_dest ==1:
+                        ecx_dest =0
+                        break
+                    else:
+                        count+=1
+                        print "Found a thiscall at %s"%(funcs.symbol.full_name)
+                        ecx_dest = 0
+                        break
+                if mlil_ins.dest == 'ecx':
+                    ecx_dest =1
 print "Found a total of %s functions with thicall misidentified"%(count)
 
