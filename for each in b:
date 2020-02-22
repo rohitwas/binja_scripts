@@ -1,0 +1,10 @@
+for each in b:
+ a=current_function.get_low_level_il_at(each[1])
+ if a is not None:
+ 	c = a.medium_level_il.ssa_form
+ 	print c
+ 	print c.vars_read
+ 	print c.vars_written
+ 	print c.operands
+ else:
+  print "No MLIL at %s"%(hex(each[1]))
