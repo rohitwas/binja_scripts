@@ -24,7 +24,6 @@ def func_gadget_find(each_func):
             hit = 0
             sink1 = []
             sink2 = []
-            memory_uses = each_func.mlil.ssa_form.get_ssa_memory_uses(i)
             for each_use in memory_uses:
                 if each_use.operation != MediumLevelILOperation.MLIL_SET_VAR_SSA :
                     continue
