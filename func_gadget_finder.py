@@ -39,7 +39,7 @@ def func_gadget_find(each_func):
                     if read_ins == None:
                         continue   
                 # If memory is being read from ecx or another register that was previously assigned to ecx
-                if str(read_ins.src) == 'ecx':
+                if str(read_ins.src) == 'ecx' or 'ecx' in str(vars_read.var):
                     sink1.append(vars_written)
                 for sinks in sink1 :
                     if vars_read == sinks:
@@ -49,8 +49,6 @@ def func_gadget_find(each_func):
                         print "[*] Found a double de-reference of this/ecx!\n %s , %s \n"%(each_func.symbol.full_name, hex(each_func.start))
                         hit =1
                         break
-                if hit == 1:
-                    break
             if hit == 1:
                 break
             i=i+1
