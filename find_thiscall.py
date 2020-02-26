@@ -1,6 +1,6 @@
 
 ''' 
-For Windwos binaries, find all potential thiscall functions which are misidentified as 'cdecl' 
+For Windows binaries, find all potential thiscall functions which are misidentified as 'cdecl' 
 
 logic : iterate thru all mlil instructions of type MLIL_SET_VAR and 
 if within the first basic block (or so)  there is an ssa_ins.src.value.reg == 'ecx' 

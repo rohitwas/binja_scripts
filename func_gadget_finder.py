@@ -1,5 +1,5 @@
 """
-IE 11 has a protection that , on top of CFG, you can only call indirect functions 
+IE 11 has a protection that , on top of CFG, restricts you to only calling indirect functions 
 which have similar type signature as the intended function. This is done because in 'thiscall' convention the callee
 is responsible for stack cleanup
 Specifically there is a stack pointer save before the actual indirect call and compare after the call which ensures
