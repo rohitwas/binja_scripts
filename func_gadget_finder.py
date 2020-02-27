@@ -19,36 +19,41 @@ def func_gadget_find(each_func):
         while(1):
             memory_uses = each_func.mlil.ssa_form.get_ssa_memory_uses(i)
             if (memory_uses == []) :
-                #print "terminating with i %s"%(i)
                 break
             hit = 0
             sink1 = []
             sink2 = []
+            sink3 = []
             for each_use in memory_uses:
-                if each_use.operation != MediumLevelILOperation.MLIL_SET_VAR_SSA :
-                    continue
-                if len(each_use.vars_read) == 0:
-                    continue
-                if len(each_use.vars_written) == 0:
-                    continue
-                vars_read = each_use.vars_read[0]
-                vars_written = each_use.vars_written[0]
-                read_ins = each_func.mlil.get_ssa_var_definition(each_use.vars_read[0])        
+                if each_use.operation == MediumLevelILOperation.MLIL_SET_VAR_SSA:
+                    if len(each_use.vars_read) == 0:
+                        continue
+                    if len(each_use.vars_written) == 0:
+                        continue
+                    vars_read = each_use.vars_read[0]
+                    vars_written = each_use.vars_written[0]
+                    read_ins = each_func.mlil.get_ssa_var_definition(each_use.vars_read[0])        
+                    
+                    if 'ecx' not in str(vars_read.var):
+                        if read_ins == None:
+                            continue   
+                    # If memory is being read from ecx or another register that was previously assigned to ecx
+                    if str(read_ins.src) == 'ecx' or 'ecx' in str(vars_read.var):
+                        sink1.append(vars_written)
+                    for sinks in sink1 :
+                        if vars_read == sinks:
+                            sink2.append(vars_written)
+                    for sinks in sink2:
+                        if vars_read == sinks:
+                            sink3.append(vars_read)
                 
-                if 'ecx' not in str(vars_read.var):
-                    if read_ins == None:
-                        continue   
-                # If memory is being read from ecx or another register that was previously assigned to ecx
-                if str(read_ins.src) == 'ecx' or 'ecx' in str(vars_read.var):
-                    sink1.append(vars_written)
-                for sinks in sink1 :
-                    if vars_read == sinks:
-                        sink2.append(vars_written)
-                for sinks in sink2:
-                    if vars_read == sinks:
-                        print "[*] Found a double de-reference of this/ecx!\n %s , %s \n"%(each_func.symbol.full_name, hex(each_func.start))
-                        hit =1
-                        break
+                if each_use.operation == MediumLevelILOperation.MLIL_STORE_SSA:
+                    vars_written = each_use.dest.ssa_form.vars_read[0] # note: for MLIL_STORE_SSA vars_written is an empty []
+                    for sinks in sink3:
+                        if vars_written ==sinks:
+                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s , %s \n"%(each_use, vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))             
+                            hit =1
+                            break
             if hit == 1:
                 break
             i=i+1
