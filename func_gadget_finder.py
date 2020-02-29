@@ -11,6 +11,10 @@ b) there is a memory write in a memory location which is referenced as a double 
    via the 'this' pointer (ecx/rcx)
    essentially any writes of the form  *(*(this+ index) )
 
+note-We currently search across all functions and not just CFG valid functions. 
+BN doesnt recognize the CFG Function Table from the PE Header. Needs another script that parses CFG function Table
+and only looks at those which can be valid indirect call targets
+
 """
 
 def func_gadget_find(each_func):
