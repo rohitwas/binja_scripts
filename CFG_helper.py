@@ -37,7 +37,9 @@ for i in range(0, GuardCFFunctionTable_size):
     CFG_byte = br.read8()
     CFG_funcs.append(bv.get_function_at(bv.start + CFG_RVA).symbol.full_name)
 
-
+#set comment at each RVA to the corresponding function's full name
+# for i in range(0,len(CFG_funcs)):
+#     bv.set_comment_at(GuardCFFunctionTable_virtualAddress + i*5,CFG_funcs[i])
 
 
 
