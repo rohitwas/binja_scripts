@@ -1,5 +1,5 @@
 """
-Binary Nijnja doesn't (yet) parse the full Load Config Directory Table for CFG compiled PE files. 
+Binary Nijnja sometimes doesn't parse the full Load Config Directory Table for CFG compiled PE files. 
 Issue filed here : https://github.com/Vector35/binaryninja-api/issues/1542
 
 # Parse PE header, find load config directory table
