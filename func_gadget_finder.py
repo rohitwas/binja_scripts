@@ -77,16 +77,36 @@ def byte_swap(i):
     return struct.unpack("<I", struct.pack(">I", temp))[0]
  
 
-lcte = parse_data_view("PE_Data_Directory_Entry",(bv.start + 0x1c8))
-lcte_virtualAddress = byte_swap(lcte.virtualAddress)#RVA
-lcte_size = byte_swap(lcte.size)
-lcte_virtualAddress = lcte_virtualAddress + bv.start
+#Check if BN was able to parse CFG headers successfully?
+data_keys = bv.data_vars.keys()
+data_vals = bv.data_vars.values()
+lcte_index = 0
+cfg_index=0
+for index in range(0,len(data_vals)):
+  if "Guard_Control_Flow_Function_Table" in str(data_vals[index]):
+    cfg_index = index
+  if "Load_Configuration_Directory_Table" in str(data_vals[index]):
+    lcte_index = index
+
+if  cfg_index !=0 and lcte_index!=0:
+    #print "Found Load Config Dir. Table table at %s"%(hex(data_keys[lcte_index])) # address of the CFG Function Table 
+    #print "Found CFG table at %s"%(hex(data_keys[cfg_index])) # address of the CFG Function Table 
+    GuardCFFunctionTable_virtualAddress = data_keys[cfg_index]
+    lcte_virtualAddress = data_keys[lcte_index]
+    lcte = parse_data_view("Load_Configuration_Directory_Table",lcte_virtualAddress)
+    GuardCFFunctionTable_size = byte_swap(lcte.guardCFFunctionCount.str)
+else:
+    lcte = parse_data_view("PE_Data_Directory_Entry",(bv.start + 0x1c8))
+    print "blah blah blah" +str(lcte)
+    lcte_virtualAddress = byte_swap(lcte.virtualAddress)#RVA
+    lcte_size = byte_swap(lcte.size)
+    lcte_virtualAddress = lcte_virtualAddress + bv.start
+    GuardCFFunctionTable_offset = bv.types["SIZE_T"].width * 4 #16/32
+    GuardCFFunctionTable = parse_data_view("PE_Data_Directory_Entry", (lcte_virtualAddress + lcte_size + GuardCFFunctionTable_offset ))    
+    GuardCFFunctionTable_virtualAddress = byte_swap(GuardCFFunctionTable.virtualAddress)#RVA
+    GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
 
 
-GuardCFFunctionTable_offset = bv.types["SIZE_T"].width * 4 #16/32
-GuardCFFunctionTable = parse_data_view("PE_Data_Directory_Entry", (lcte_virtualAddress + lcte_size + GuardCFFunctionTable_offset ))
-GuardCFFunctionTable_virtualAddress = byte_swap(GuardCFFunctionTable.virtualAddress)#RVA
-GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
 br = BinaryReader(bv)
 br.offset = (GuardCFFunctionTable_virtualAddress)
 
@@ -103,6 +123,7 @@ if GuardCFFunctionTable_size == len(CFG_funcs):
 else:
     print "[*] Number of functions within the CFG Table dont match Function count within the CFG headers"
 
+retn_func_count = 0
 #Filter those functions with "retn 0x8" instructions
 for each_func in CFG_funcs:
     retn_ins = 0
@@ -116,4 +137,7 @@ for each_func in CFG_funcs:
         retn_ins = 1
         break
     if retn_ins ==1:
+        retn_func_count+=1
         func_gadget_find(each_func)
+
+print "[*] Found %s functions with the return instruction criteria"%(retn_func_count)

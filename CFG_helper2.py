@@ -10,6 +10,7 @@ cfg_index=0
 for index in range(0,len(b)):
   if "Guard_Control_Flow_Function_Table" in str(b[index]):
     cfg_index = index
+    break
 if cfg_index !=0:
-    print hex(a[cfg_index]) # address of the CFG Function Table
+    print "Found CFG table at "%(hex(a[cfg_index])) # address of the CFG Function Table 
  

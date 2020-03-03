@@ -22,12 +22,11 @@ lcte = parse_data_view("PE_Data_Directory_Entry",(bv.start + 0x1c8))
 lcte_virtualAddress = byte_swap(lcte.virtualAddress)#RVA
 lcte_size = byte_swap(lcte.size)
 lcte_virtualAddress = lcte_virtualAddress + bv.start
-
-
 GuardCFFunctionTable_offset = bv.types["SIZE_T"].width * 4 #16/32
-GuardCFFunctionTable = parse_data_view("PE_Data_Directory_Entry", (lcte_virtualAddress + lcte_size + GuardCFFunctionTable_offset ))
+GuardCFFunctionTable = parse_data_view("PE_Data_Directory_Entry", (lcte_virtualAddress + lcte_size + GuardCFFunctionTable_offset ))    
 GuardCFFunctionTable_virtualAddress = byte_swap(GuardCFFunctionTable.virtualAddress)#RVA
 GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
+
 br = BinaryReader(bv)
 br.offset = (GuardCFFunctionTable_virtualAddress)
 
