@@ -97,7 +97,6 @@ if  cfg_index !=0 and lcte_index!=0:
     GuardCFFunctionTable_size = byte_swap(lcte.guardCFFunctionCount.str)
 else:
     lcte = parse_data_view("PE_Data_Directory_Entry",(bv.start + 0x1c8))
-    print "blah blah blah" +str(lcte)
     lcte_virtualAddress = byte_swap(lcte.virtualAddress)#RVA
     lcte_size = byte_swap(lcte.size)
     lcte_virtualAddress = lcte_virtualAddress + bv.start
