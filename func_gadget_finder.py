@@ -75,7 +75,8 @@ def byte_swap(i):
     i =str(i).replace(" ", "")
     temp = int (i,16)
     return struct.unpack("<I", struct.pack(">I", temp))[0]
- 
+
+br = BinaryReader(bv)
 
 #Check if BN was able to parse CFG headers successfully?
 data_keys = bv.data_vars.keys()
@@ -88,15 +89,21 @@ for index in range(0,len(data_vals)):
   if "Load_Configuration_Directory_Table" in str(data_vals[index]):
     lcte_index = index
 
-if  cfg_index !=0 and lcte_index!=0:
+
+
+if cfg_index !=0 and lcte_index!=0:
     #print "Found Load Config Dir. Table table at %s"%(hex(data_keys[lcte_index])) # address of the CFG Function Table 
     #print "Found CFG table at %s"%(hex(data_keys[cfg_index])) # address of the CFG Function Table 
     GuardCFFunctionTable_virtualAddress = data_keys[cfg_index]
     lcte_virtualAddress = data_keys[lcte_index]
     lcte = parse_data_view("Load_Configuration_Directory_Table",lcte_virtualAddress)
-    GuardCFFunctionTable_size = byte_swap(lcte.guardCFFunctionCount.str)
+    br.offset = lcte.guardCFFunctionCount.address
+    if "uint64_t" in str(lcte.guardCFFunctionCount.type):
+        GuardCFFunctionTable_size = br.read64le()
+    elif "uint32_t" in str(lcte.guardCFFunctionCount.type):
+        GuardCFFunctionTable_size = br.read32le()
 else:
-    lcte = parse_data_view("PE_Data_Directory_Entry",(bv.start + 0x1c8))
+    lcte = parse_data_view("PE_Data_Directory_Entry",(bv.start + 0x1c8))#hardcoded for now
     lcte_virtualAddress = byte_swap(lcte.virtualAddress)#RVA
     lcte_size = byte_swap(lcte.size)
     lcte_virtualAddress = lcte_virtualAddress + bv.start
@@ -106,7 +113,7 @@ else:
     GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
 
 
-br = BinaryReader(bv)
+
 br.offset = (GuardCFFunctionTable_virtualAddress)
 
 #Find all functions within the CFG Table
