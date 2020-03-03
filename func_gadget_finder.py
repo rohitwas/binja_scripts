@@ -6,14 +6,15 @@ Specifically there is a stack pointer save before the actual indirect call and c
 that you can only call functions with the same number of arguments as intended. 
 
 This particular script attempts to find functions with the following criteria -
-a) has 2 arguments , i.e have a retn 0x8 instruction at the end of the function
-b) there is a memory write in a memory location which is referenced as a double pointer either directly or indirectly 
+a) Funciton's RVA is listed in the CFG table/is a valid indirect call location
+b) has 2 arguments , i.e have a retn 0x8 instruction at the end of the function
+c) there is a memory write in a memory location which is referenced as a double pointer either directly or indirectly 
    via the 'this' pointer (ecx/rcx)
    essentially any writes of the form  *(*(this+ index) )
 
-note: We currently search across all functions and not just CFG valid functions. 
-BN doesnt recognize the CFG Function Table from the PE Header. Needs another script that parses CFG function Table
-and only looks at those which can be valid indirect call targets
+note: This script currently doesnt rely on BN's analyzer to recognize CFG table. There is some unreliability which
+has been reported as an issue here-
+https://github.com/Vector35/binaryninja-api/issues/1542
 
 """
 
@@ -65,8 +66,45 @@ def func_gadget_find(each_func):
         pass
 
 
-funcs = bv.functions
-for each_func in funcs:
+
+def parse_data_view(structure, address):
+    PE = StructuredDataView(bv, structure, address)
+    return PE
+
+def byte_swap(i):
+    i =str(i).replace(" ", "")
+    temp = int (i,16)
+    return struct.unpack("<I", struct.pack(">I", temp))[0]
+ 
+
+lcte = parse_data_view("PE_Data_Directory_Entry",(bv.start + 0x1c8))
+lcte_virtualAddress = byte_swap(lcte.virtualAddress)#RVA
+lcte_size = byte_swap(lcte.size)
+lcte_virtualAddress = lcte_virtualAddress + bv.start
+
+
+GuardCFFunctionTable_offset = bv.types["SIZE_T"].width * 4 #16/32
+GuardCFFunctionTable = parse_data_view("PE_Data_Directory_Entry", (lcte_virtualAddress + lcte_size + GuardCFFunctionTable_offset ))
+GuardCFFunctionTable_virtualAddress = byte_swap(GuardCFFunctionTable.virtualAddress)#RVA
+GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
+br = BinaryReader(bv)
+br.offset = (GuardCFFunctionTable_virtualAddress)
+
+#Find all functions within the CFG Table
+CFG_funcs = []
+for i in range(0, GuardCFFunctionTable_size):
+    CFG_RVA = br.read32le()
+    CFG_byte = br.read8()
+    #CFG_funcs.append(bv.get_function_at(bv.start + CFG_RVA).symbol.full_name)
+    CFG_funcs.append(bv.get_function_at(bv.start + CFG_RVA))
+
+if GuardCFFunctionTable_size == len(CFG_funcs):
+    print "[*] Found %s CFG Valid Functions"%(len(CFG_funcs))
+else:
+    print "[*] Number of functions within the CFG Table dont match Function count within the CFG headers"
+
+#Filter those functions with "retn 0x8" instructions
+for each_func in CFG_funcs:
     retn_ins = 0
     for each_ins in each_func.instructions:
         if "retn" not in str(each_ins[0][0]):
