@@ -17,8 +17,8 @@ has been reported as an issue here-
 https://github.com/Vector35/binaryninja-api/issues/1542
 
 """
-
-def func_gadget_find(each_func):
+br = BinaryReader(bv)
+def func_gadget_find(each_func,found):
     try:
         i = 0
         while(1):
@@ -56,8 +56,9 @@ def func_gadget_find(each_func):
                     vars_written = each_use.dest.ssa_form.vars_read[0] # note: for MLIL_STORE_SSA vars_written is an empty []
                     for sinks in sink3:
                         if vars_written ==sinks:
-                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s , %s \n"%(each_use, vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))             
+                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s , %s \n"%(each_use, vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
                             hit =1
+                            found[0] =1          
                             break
             if hit == 1:
                 break
@@ -76,7 +77,6 @@ def byte_swap(i):
     temp = int (i,16)
     return struct.unpack("<I", struct.pack(">I", temp))[0]
 
-br = BinaryReader(bv)
 
 #Check if BN was able to parse CFG headers successfully?
 data_keys = bv.data_vars.keys()
@@ -88,8 +88,6 @@ for index in range(0,len(data_vals)):
     cfg_index = index
   if "Load_Configuration_Directory_Table" in str(data_vals[index]):
     lcte_index = index
-
-
 
 if cfg_index !=0 and lcte_index!=0:
     #print "Found Load Config Dir. Table table at %s"%(hex(data_keys[lcte_index])) # address of the CFG Function Table 
@@ -112,8 +110,6 @@ else:
     GuardCFFunctionTable_virtualAddress = byte_swap(GuardCFFunctionTable.virtualAddress)#RVA
     GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
 
-
-
 br.offset = (GuardCFFunctionTable_virtualAddress)
 
 #Find all functions within the CFG Table
@@ -132,6 +128,7 @@ else:
 retn_func_count = 0
 #Filter those functions with "retn 0x8" instructions
 for each_func in CFG_funcs:
+#for each_func in bv.functions:
     retn_ins = 0
     for each_ins in each_func.instructions:
         if "retn" not in str(each_ins[0][0]):
@@ -144,6 +141,12 @@ for each_func in CFG_funcs:
         break
     if retn_ins ==1:
         retn_func_count+=1
-        func_gadget_find(each_func)
+        found =[0]
+        func_gadget_find(each_func,found)#check the function for gadgets
+        for each_callee in each_func.callees:
+            found[0] =0
+            func_gadget_find(each_callee,found)#check each callee for gadgets
+            if found[0] ==1:
+                print "[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,hex(each_func.start), each_callee.symbol.full_name,hex(each_callee.start))
 
 print "[*] Found %s functions with the return instruction criteria"%(retn_func_count)
