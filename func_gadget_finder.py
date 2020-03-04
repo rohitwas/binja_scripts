@@ -6,13 +6,14 @@ Specifically there is a stack pointer save before the actual indirect call and c
 that you can only call functions with the same number of arguments as intended. 
 
 This particular script attempts to find functions with the following criteria -
-a) Funciton's RVA is listed in the CFG table/is a valid indirect call location
+a) Function's RVA is listed in the CFG table/is a valid indirect call location
 b) has 2 arguments , i.e have a retn 0x8 instruction at the end of the function
 c) there is a memory write in a memory location which is referenced as a double pointer either directly or indirectly 
    via the 'this' pointer (ecx/rcx)
    essentially any writes of the form  *(*(this+ index) )
+d) any other function which satisfies only c) above but its is called from a function that satisfies a) AND b)
 
-note: This script currently doesnt rely on BN's analyzer to recognize CFG table. There is some unreliability which
+note: This script currently doesn't rely on BN's analyzer to recognize CFG table. There is some uncertainty which
 has been reported as an issue here-
 https://github.com/Vector35/binaryninja-api/issues/1542
 
