@@ -1,6 +1,24 @@
-from binaryninja import *
+"""
+IE 11 has a protection that , on top of CFG, restricts you to only calling indirect functions 
+which have similar type signature as the intended function. This is done because in 'thiscall' convention the callee
+is responsible for stack cleanup
+Specifically there is a stack pointer save before the actual indirect call and compare after the call which ensures
+that you can only call functions with the same number of arguments as intended. 
 
+This particular script attempts to find functions with the following criteria -
+a) Function's RVA is listed in the CFG table/is a valid indirect call location
+b) has 2 arguments , i.e have a retn 0x8 instruction at the end of the function
+c) there is a memory write in a memory location which is referenced as a double pointer either directly or indirectly 
+   via the 'this' pointer (ecx/rcx)
+   essentially any writes of the form  *(*(this+ index) )
+d) any other function which satisfies only c) above but its is called from a function that satisfies a) AND b)
 
+note: This script currently doesn't rely on BN's analyzer to recognize CFG table. There is some uncertainty which
+has been reported as an issue here-
+https://github.com/Vector35/binaryninja-api/issues/1542
+
+"""
+br = BinaryReader(bv)
 def func_gadget_find(each_func,found):
     try:
         i = 0
@@ -62,7 +80,7 @@ def func_search(each_func):
             break
         return retn_ins
 
-def parse_data_view(structure, address,bv):
+def parse_data_view(structure, address):
     PE = StructuredDataView(bv, structure, address)
     return PE
 
@@ -72,81 +90,66 @@ def byte_swap(i):
     return struct.unpack("<I", struct.pack(">I", temp))[0]
 
 
+#Check if BN was able to parse CFG headers successfully?
+data_keys = bv.data_vars.keys()
+data_vals = bv.data_vars.values()
+lcte_index = 0
+cfg_index=0
+for index in range(0,len(data_vals)):
+  if "Guard_Control_Flow_Function_Table" in str(data_vals[index]):
+    cfg_index = index
+  if "Load_Configuration_Directory_Table" in str(data_vals[index]):
+    lcte_index = index
 
-def scan_binary(bin):
-    print "Analyzing %s"%(bin)
-    bv = BinaryViewType["PE"].open(bin)
-    bv.update_analysis_and_wait()
-    br = BinaryReader(bv)
+if cfg_index !=0 and lcte_index!=0:
+    #print "Found Load Config Dir. Table table at %s"%(hex(data_keys[lcte_index])) # address of the CFG Function Table 
+    #print "Found CFG table at %s"%(hex(data_keys[cfg_index])) # address of the CFG Function Table 
+    GuardCFFunctionTable_virtualAddress = data_keys[cfg_index]
+    lcte_virtualAddress = data_keys[lcte_index]
+    lcte = parse_data_view("Load_Configuration_Directory_Table",lcte_virtualAddress)
+    br.offset = lcte.guardCFFunctionCount.address
+    if "uint64_t" in str(lcte.guardCFFunctionCount.type):
+        GuardCFFunctionTable_size = br.read64le()
+    elif "uint32_t" in str(lcte.guardCFFunctionCount.type):
+        GuardCFFunctionTable_size = br.read32le()
+else:
+    lcte = parse_data_view("PE_Data_Directory_Entry",(bv.start + 0x1c8))#hardcoded for now
+    lcte_virtualAddress = byte_swap(lcte.virtualAddress)#RVA
+    lcte_size = byte_swap(lcte.size)
+    lcte_virtualAddress = lcte_virtualAddress + bv.start
+    GuardCFFunctionTable_offset = bv.types["SIZE_T"].width * 4 #16/32
+    GuardCFFunctionTable = parse_data_view("PE_Data_Directory_Entry", (lcte_virtualAddress + lcte_size + GuardCFFunctionTable_offset ))    
+    GuardCFFunctionTable_virtualAddress = byte_swap(GuardCFFunctionTable.virtualAddress)#RVA
+    GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
 
-    #Check if BN was able to parse CFG headers successfully?
-    data_keys = bv.data_vars.keys()
-    data_vals = bv.data_vars.values()
-    lcte_index = 0
-    cfg_index=0
-    for index in range(0,len(data_vals)):
-      if "Guard_Control_Flow_Function_Table" in str(data_vals[index]):
-        cfg_index = index
-      if "Load_Configuration_Directory_Table" in str(data_vals[index]):
-        lcte_index = index
+br.offset = (GuardCFFunctionTable_virtualAddress)
 
-    if cfg_index !=0 and lcte_index!=0:
-        #print "Found Load Config Dir. Table table at %s"%(hex(data_keys[lcte_index])) # address of the CFG Function Table 
-        #print "Found CFG table at %s"%(hex(data_keys[cfg_index])) # address of the CFG Function Table 
-        GuardCFFunctionTable_virtualAddress = data_keys[cfg_index]
-        lcte_virtualAddress = data_keys[lcte_index]
-        lcte = parse_data_view("Load_Configuration_Directory_Table", lcte_virtualAddress, bv)
-        br.offset = lcte.guardCFFunctionCount.address
-        if "uint64_t" in str(lcte.guardCFFunctionCount.type):
-            GuardCFFunctionTable_size = br.read64le()
-        elif "uint32_t" in str(lcte.guardCFFunctionCount.type):
-            GuardCFFunctionTable_size = br.read32le()
-    else:
-        lcte = parse_data_view("PE_Data_Directory_Entry",(bv.start + 0x1c8) , bv)#hardcoded for now
-        lcte_virtualAddress = byte_swap(lcte.virtualAddress)#RVA
-        lcte_size = byte_swap(lcte.size)
-        lcte_virtualAddress = lcte_virtualAddress + bv.start
-        GuardCFFunctionTable_offset = bv.types["SIZE_T"].width * 4 #16/32
-        GuardCFFunctionTable = parse_data_view("PE_Data_Directory_Entry", (lcte_virtualAddress + lcte_size + GuardCFFunctionTable_offset ), bv)    
-        GuardCFFunctionTable_virtualAddress = byte_swap(GuardCFFunctionTable.virtualAddress)#RVA
-        GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
+#Find all functions within the CFG Table
+CFG_funcs = []
+for i in range(0, GuardCFFunctionTable_size):
+    CFG_RVA = br.read32le()
+    CFG_byte = br.read8()
+    #CFG_funcs.append(bv.get_function_at(bv.start + CFG_RVA).symbol.full_name)
+    CFG_funcs.append(bv.get_function_at(bv.start + CFG_RVA))
 
-    br.offset = (GuardCFFunctionTable_virtualAddress)
+if GuardCFFunctionTable_size == len(CFG_funcs):
+    print "[*] Found %s CFG Valid Functions"%(len(CFG_funcs))
+else:
+    print "[*] Number of functions within the CFG Table dont match Function count within the CFG headers"
 
-    #Find all functions within the CFG Table
-    CFG_funcs = []
-    for i in range(0, GuardCFFunctionTable_size):
-        CFG_RVA = br.read32le()
-        CFG_byte = br.read8()
-        #CFG_funcs.append(bv.get_function_at(bv.start + CFG_RVA).symbol.full_name)
-        CFG_funcs.append(bv.get_function_at(bv.start + CFG_RVA))
+retn_func_count = 0
+#Filter those functions with "retn 0x8" instructions
+for each_func in CFG_funcs:
+#for each_func in bv.functions:
+    #if func_search(each_func) == 1:        
+    if each_func.stack_adjustment.value == 8:
+        retn_func_count+=1
+        found =[0]
+        func_gadget_find(each_func,found)#check the function for gadgets
+        for each_callee in each_func.callees:
+            found[0] =0
+            func_gadget_find(each_callee,found)#check each callee for gadgets
+            if found[0] ==1:
+                print "[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,hex(each_func.start), each_callee.symbol.full_name,hex(each_callee.start))
 
-    if GuardCFFunctionTable_size == len(CFG_funcs):
-        print "[*] Found %s CFG Valid Functions"%(len(CFG_funcs))
-    else:
-        print "[*] Number of functions within the CFG Table dont match Function count within the CFG headers"
-
-    retn_func_count = 0
-    #Filter those functions with "retn 0x8" instructions
-    for each_func in CFG_funcs:
-    #for each_func in bv.functions:
-        #if func_search(each_func) == 1:        
-        if each_func.stack_adjustment.value == 8:
-            retn_func_count+=1
-            found =[0]
-            func_gadget_find(each_func,found)#check the function for gadgets
-            for each_callee in each_func.callees:
-                found[0] =0
-                func_gadget_find(each_callee,found)#check each callee for gadgets
-                if found[0] ==1:
-                    print "[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,hex(each_func.start), each_callee.symbol.full_name,hex(each_callee.start))
-
-    print "[*] Found %s functions with the return instruction criteria"%(retn_func_count)
-
-
-binary_list = ["C:\\Windows\\System32\\cfgmgr32.dll","C:\\Windows\\System32\\powrprof.dll", "C:\\Windows\\System32\\ucrtbase.dll", "C:\\Windows\\System32\\jscript9.dll"  ]
-for each_bin in binary_list:
-    print "\n\n[*] Analyzing Binary %s"%(each_bin)
-    scan_binary(each_bin)
-
-
+print "[*] Found %s functions with the return instruction criteria"%(retn_func_count)
