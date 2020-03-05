@@ -67,7 +67,18 @@ def func_gadget_find(each_func,found):
     except:
         pass
 
-
+def func_search(each_func):    
+        retn_ins = 0
+        for each_ins in each_func.instructions:
+            if "retn" not in str(each_ins[0][0]):
+                continue
+            if not len(each_ins[0]) >2:
+                continue
+            if "0x8" not in str(each_ins[0][2]):
+                continue
+            retn_ins = 1
+            break
+        return retn_ins
 
 def parse_data_view(structure, address):
     PE = StructuredDataView(bv, structure, address)
@@ -130,17 +141,8 @@ retn_func_count = 0
 #Filter those functions with "retn 0x8" instructions
 for each_func in CFG_funcs:
 #for each_func in bv.functions:
-    retn_ins = 0
-    for each_ins in each_func.instructions:
-        if "retn" not in str(each_ins[0][0]):
-            continue
-        if not len(each_ins[0]) >2:
-            continue
-        if "0x8" not in str(each_ins[0][2]):
-            continue
-        retn_ins = 1
-        break
-    if retn_ins ==1:
+    #if func_search(each_func) == 1:        
+    if each_func.stack_adjustment.value == 8:
         retn_func_count+=1
         found =[0]
         func_gadget_find(each_func,found)#check the function for gadgets

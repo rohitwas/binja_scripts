@@ -1,9 +1,14 @@
 '''
 
 Finds functions that end with a 
-"retn 0x8" instruction
+"retn 0x8" instruction by searching each instruction within the function boundary
 
-
+note: This can be done via a simple current_function.stack_adjustment.value == 8 statement
+some odd cases like functions which have alternate paths that do not return don'get picked up by BN.
+examples-
+< jscript9.dll 11.0.18362.657 March 4th 2020> 
+ScriptEngineBase::ReleaseAndRethrowException(@0x1665e0L) 
+JsrtExternalObject::SetConfigurable (@0x175d90L)
 '''
 
 
@@ -11,12 +16,14 @@ retns = []
 funcs = bv.functions
 for each_func in funcs:
     for each_ins in each_func.instructions:
-        if "retn" in str(each_ins[0][0]):
-            if len(each_ins[0]) >2:
-                if "0x8" in str(each_ins[0][2]):
-                    retns.append({str(each_func.symbol.full_name) : hex(each_func.start) })
-
-
+        if "retn" not in str(each_ins[0][0]):
+        	continue
+        if not len(each_ins[0]) >2:
+            continue
+        if "0x8" not in str(each_ins[0][2]):
+        	continue
+        retns.append({str(each_func.symbol.full_name) : hex(each_func.start) })
+print retns
 
 '''
 example ouput
