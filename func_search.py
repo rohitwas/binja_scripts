@@ -4,7 +4,9 @@ Finds functions that end with a
 "retn 0x8" instruction by searching each instruction within the function boundary
 
 note: This can be done via a simple current_function.stack_adjustment.value == 8 statement
-some odd cases like functions which have alternate paths that do not return don'get picked up by BN.
+*but* we would miss some odd cases like functions which have alternate paths that do not return and 
+the stack_adjustment value is ambiguous/indeterminate.
+
 examples-
 < jscript9.dll 11.0.18362.657 March 4th 2020> 
 ScriptEngineBase::ReleaseAndRethrowException(@0x1665e0L) 
