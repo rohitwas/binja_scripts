@@ -105,9 +105,6 @@ for index in range(0,len(data_vals)):
     header_index = index
 
 if cfg_index !=0 and lcte_index !=0:
-    print "we here"
-    #print "Found Load Config Dir. Table table at %s"%(hex(data_keys[lcte_index])) # address of the CFG Function Table 
-    #print "Found CFG table at %s"%(hex(data_keys[cfg_index])) # address of the CFG Function Table 
     GuardCFFunctionTable_virtualAddress = data_keys[cfg_index]
     lcte_virtualAddress = data_keys[lcte_index]
     lcte = parse_data_view("Load_Configuration_Directory_Table",lcte_virtualAddress)
@@ -163,6 +160,7 @@ for each_func in CFG_funcs:
             found[0] =0
             func_gadget_find(each_callee,found)#check each callee for gadgets
             if found[0] ==1:
-                print "[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,hex(each_func.start), each_callee.symbol.full_name,hex(each_callee.start))
+                print "[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,
+                    hex(each_func.start), each_callee.symbol.full_name,hex(each_callee.start))
 
 print "[*] Found %s functions with the return instruction criteria"%(retn_func_count)
