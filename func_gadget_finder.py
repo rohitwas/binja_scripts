@@ -18,6 +18,7 @@ has been reported as an issue here-
 https://github.com/Vector35/binaryninja-api/issues/1542
 
 """
+import sys
 br = BinaryReader(bv)
 def func_gadget_find(each_func,found):
     try:
@@ -89,19 +90,22 @@ def byte_swap(i):
     temp = int (i,16)
     return struct.unpack("<I", struct.pack(">I", temp))[0]
 
-
 #Check if BN was able to parse CFG headers successfully?
 data_keys = bv.data_vars.keys()
 data_vals = bv.data_vars.values()
 lcte_index = 0
-cfg_index=0
+cfg_index = 0
+header_index = 0
 for index in range(0,len(data_vals)):
   if "Guard_Control_Flow_Function_Table" in str(data_vals[index]):
     cfg_index = index
   if "Load_Configuration_Directory_Table" in str(data_vals[index]):
     lcte_index = index
+  if "PE32_Optional_Header" in str(data_vals[index]):
+    header_index = index
 
-if cfg_index !=0 and lcte_index!=0:
+if cfg_index !=0 and lcte_index !=0:
+    print "we here"
     #print "Found Load Config Dir. Table table at %s"%(hex(data_keys[lcte_index])) # address of the CFG Function Table 
     #print "Found CFG table at %s"%(hex(data_keys[cfg_index])) # address of the CFG Function Table 
     GuardCFFunctionTable_virtualAddress = data_keys[cfg_index]
@@ -112,24 +116,33 @@ if cfg_index !=0 and lcte_index!=0:
         GuardCFFunctionTable_size = br.read64le()
     elif "uint32_t" in str(lcte.guardCFFunctionCount.type):
         GuardCFFunctionTable_size = br.read32le()
-else:
-    lcte = parse_data_view("PE_Data_Directory_Entry",(bv.start + 0x1c8))#hardcoded for now
+elif header_index != 0:
+    pe32_header_address = data_vals[header_index]
+    pe32_header = parse_data_view("PE32_Optional_Header",pe32_header_address.address)
+    loadConfigTableEntry = pe32_header.loadConfigTableEntry.address
+    lcte = parse_data_view("PE_Data_Directory_Entry",loadConfigTableEntry)#hardcoded for now
     lcte_virtualAddress = byte_swap(lcte.virtualAddress)#RVA
     lcte_size = byte_swap(lcte.size)
     lcte_virtualAddress = lcte_virtualAddress + bv.start
     GuardCFFunctionTable_offset = bv.types["SIZE_T"].width * 4 #16/32
-    GuardCFFunctionTable = parse_data_view("PE_Data_Directory_Entry", (lcte_virtualAddress + lcte_size + GuardCFFunctionTable_offset ))    
+    GuardCFFunctionTable = parse_data_view("PE_Data_Directory_Entry", (lcte_virtualAddress + lcte_size +GuardCFFunctionTable_offset ))
     GuardCFFunctionTable_virtualAddress = byte_swap(GuardCFFunctionTable.virtualAddress)#RVA
     GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
+else:
+    print "Couldnt Find PE32 header, exiting!"
+    sys.exit()
 
-br.offset = (GuardCFFunctionTable_virtualAddress)
+br.offset = GuardCFFunctionTable_virtualAddress
 
 #Find all functions within the CFG Table
 CFG_funcs = []
 for i in range(0, GuardCFFunctionTable_size):
     CFG_RVA = br.read32le()
     CFG_byte = br.read8()
-    #CFG_funcs.append(bv.get_function_at(bv.start + CFG_RVA).symbol.full_name)
+    func_address = bv.get_function_at(bv.start + CFG_RVA)
+    #if BN failed to identify a function there, create one
+    if func_address ==None:
+        bv.create_user_function(bv.start + CFG_RVA)
     CFG_funcs.append(bv.get_function_at(bv.start + CFG_RVA))
 
 if GuardCFFunctionTable_size == len(CFG_funcs):
