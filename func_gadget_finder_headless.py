@@ -99,7 +99,7 @@ def scan_binary(bin):
     if cfg_index !=0 and lcte_index !=0:
         GuardCFFunctionTable_virtualAddress = data_keys[cfg_index]
         lcte_virtualAddress = data_keys[lcte_index]
-        lcte = parse_data_view("Load_Configuration_Directory_Table",lcte_virtualAddress)
+        lcte = parse_data_view("Load_Configuration_Directory_Table",lcte_virtualAddress,bv)
         br.offset = lcte.guardCFFunctionCount.address
         if "uint64_t" in str(lcte.guardCFFunctionCount.type):
             GuardCFFunctionTable_size = br.read64le()
@@ -107,15 +107,15 @@ def scan_binary(bin):
             GuardCFFunctionTable_size = br.read32le()
     elif header_index != 0:
         pe32_header_address = data_vals[header_index]
-        pe32_header = parse_data_view("PE32_Optional_Header",pe32_header_address.address)
+        pe32_header = parse_data_view("PE32_Optional_Header",pe32_header_address.address,bv)
         loadConfigTableEntry = pe32_header.loadConfigTableEntry.address
-        lcte = parse_data_view("PE_Data_Directory_Entry",loadConfigTableEntry)
+        lcte = parse_data_view("PE_Data_Directory_Entry",loadConfigTableEntry,bv)
         lcte_virtualAddress = byte_swap(lcte.virtualAddress)#RVA
         lcte_size = byte_swap(lcte.size)
         lcte_virtualAddress = lcte_virtualAddress + bv.start
         GuardCFFunctionTable_offset = bv.types["SIZE_T"].width * 4 #16/32
         GuardCFFunctionTable = parse_data_view("PE_Data_Directory_Entry", (lcte_virtualAddress + lcte_size +
-            GuardCFFunctionTable_offset ))
+            GuardCFFunctionTable_offset ),bv)
         GuardCFFunctionTable_virtualAddress = byte_swap(GuardCFFunctionTable.virtualAddress)#RVA
         GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
     else:
