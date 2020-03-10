@@ -1,0 +1,60 @@
+func_gadget_fidner2 output on jscript9.dll
+
+[*] Found 7298 CFG Valid Functions
+[*] Found a write via @ [eax_7#12 + 0x11b0].b = [eax_7#12 + 0x11b0].b @ mem#10 | 0x11 @ mem#10 -> mem#11 vars_written:<ssa <var int32_t eax_7> version 12> sinks:<ssa <var int32_t eax_7> version 12> a triple de-reference of this/ecx!
+ Js::JavascriptConversion::ToPrimitive(void*, struct Js::JavascriptHint, class Js::ScriptContext*) ,0x100c0d45L 
+
+[*] Found a write via @ [eax_18#18 + 0x28].d = 0 @ mem#24 -> mem#25 vars_written:<ssa <var int32_t eax_18> version 18> sinks:<ssa <var int32_t eax_18> version 18> a quadruple de-reference of this/ecx!
+ HostDispatch::GetDefaultValue(struct Js::JavascriptHint, void**, int32_t) ,0x10203686L 
+
+[*] Function HostDispatch::ToString(void**, class Js::ScriptContext*) @ 0x10203f40L has a callee HostDispatch::GetDefaultValue(struct Js::JavascriptHint, void**, int32_t) @ 0x10203686L which seems useful
+[*] Found a write via @ [esi#1 + 0x14].d = 0 @ mem#0 -> mem#1 vars_written:<ssa <var int32_t esi> version 1> sinks:<ssa <var int32_t esi> version 1> a quadruple de-reference of this/ecx!
+ Js::RecyclableMapSetOrWeakMapDataObjectWalker<class Js::JavascriptMapData>::Get(int32_t, struct Js::ResolvedObject*) ,0x1026f0e0L 
+
+[*] Found a write via @ [esi#1 + 0x18].d = 0 @ mem#1 -> mem#2 vars_written:<ssa <var int32_t esi> version 1> sinks:<ssa <var int32_t esi> version 1> a quadruple de-reference of this/ecx!
+ Js::RecyclableMapSetOrWeakMapDataObjectWalker<class Js::JavascriptMapData>::Get(int32_t, struct Js::ResolvedObject*) ,0x1026f0e0L 
+
+[*] Found a write via @ [esi#1 + 4].d = 0 @ mem#2 -> mem#3 vars_written:<ssa <var int32_t esi> version 1> sinks:<ssa <var int32_t esi> version 1> a quadruple de-reference of this/ecx!
+ Js::RecyclableMapSetOrWeakMapDataObjectWalker<class Js::JavascriptMapData>::Get(int32_t, struct Js::ResolvedObject*) ,0x1026f0e0L 
+
+[*] Found a write via @ [esi#1 + 8].d = 0 @ mem#3 -> mem#4 vars_written:<ssa <var int32_t esi> version 1> sinks:<ssa <var int32_t esi> version 1> a quadruple de-reference of this/ecx!
+ Js::RecyclableMapSetOrWeakMapDataObjectWalker<class Js::JavascriptMapData>::Get(int32_t, struct Js::ResolvedObject*) ,0x1026f0e0L 
+
+[*] Found a write via @ [esi#1 + 0xc].d = 0 @ mem#4 -> mem#5 vars_written:<ssa <var int32_t esi> version 1> sinks:<ssa <var int32_t esi> version 1> a quadruple de-reference of this/ecx!
+ Js::RecyclableMapSetOrWeakMapDataObjectWalker<class Js::JavascriptMapData>::Get(int32_t, struct Js::ResolvedObject*) ,0x1026f0e0L 
+
+[*] Found a write via @ [esi#1 + 0x14].d = 0 @ mem#0 -> mem#1 vars_written:<ssa <var int32_t esi> version 1> sinks:<ssa <var int32_t esi> version 1> a quadruple de-reference of this/ecx!
+ Js::RecyclableMapSetOrWeakMapDataObjectWalker<class Js::JavascriptSetData>::Get(int32_t, struct Js::ResolvedObject*) ,0x1026f170L 
+
+[*] Found a write via @ [esi#1 + 0x18].d = 0 @ mem#1 -> mem#2 vars_written:<ssa <var int32_t esi> version 1> sinks:<ssa <var int32_t esi> version 1> a quadruple de-reference of this/ecx!
+ Js::RecyclableMapSetOrWeakMapDataObjectWalker<class Js::JavascriptSetData>::Get(int32_t, struct Js::ResolvedObject*) ,0x1026f170L 
+
+[*] Found a write via @ [esi#1 + 4].d = 0 @ mem#2 -> mem#3 vars_written:<ssa <var int32_t esi> version 1> sinks:<ssa <var int32_t esi> version 1> a quadruple de-reference of this/ecx!
+ Js::RecyclableMapSetOrWeakMapDataObjectWalker<class Js::JavascriptSetData>::Get(int32_t, struct Js::ResolvedObject*) ,0x1026f170L 
+
+[*] Found a write via @ [esi#1 + 8].d = 0 @ mem#3 -> mem#4 vars_written:<ssa <var int32_t esi> version 1> sinks:<ssa <var int32_t esi> version 1> a quadruple de-reference of this/ecx!
+ Js::RecyclableMapSetOrWeakMapDataObjectWalker<class Js::JavascriptSetData>::Get(int32_t, struct Js::ResolvedObject*) ,0x1026f170L 
+
+[*] Found a write via @ [esi#1 + 0xc].d = 0 @ mem#4 -> mem#5 vars_written:<ssa <var int32_t esi> version 1> sinks:<ssa <var int32_t esi> version 1> a quadruple de-reference of this/ecx!
+ Js::RecyclableMapSetOrWeakMapDataObjectWalker<class Js::JavascriptSetData>::Get(int32_t, struct Js::ResolvedObject*) ,0x1026f170L 
+
+[*] Found a write via @ [eax_10#14 + 0x14].d = 0 @ mem#6 -> mem#7 vars_written:<ssa <var class Js::StringBuilder<class ArenaAllocator>* eax_10> version 14> sinks:<ssa <var class Js::StringBuilder<class ArenaAllocator>* eax_10> version 14> a quadruple de-reference of this/ecx!
+ Js::RecyclablePixelArrayWalker::Get(int32_t, struct Js::ResolvedObject*) ,0x1026fa40L 
+
+[*] Found a write via @ [eax_10#14 + 0x18].d = 0 @ mem#7 -> mem#8 vars_written:<ssa <var class Js::StringBuilder<class ArenaAllocator>* eax_10> version 14> sinks:<ssa <var class Js::StringBuilder<class ArenaAllocator>* eax_10> version 14> a quadruple de-reference of this/ecx!
+ Js::RecyclablePixelArrayWalker::Get(int32_t, struct Js::ResolvedObject*) ,0x1026fa40L 
+
+[*] Found a write via @ [eax_10#14 + 4].d = 0 @ mem#8 -> mem#9 vars_written:<ssa <var class Js::StringBuilder<class ArenaAllocator>* eax_10> version 14> sinks:<ssa <var class Js::StringBuilder<class ArenaAllocator>* eax_10> version 14> a quadruple de-reference of this/ecx!
+ Js::RecyclablePixelArrayWalker::Get(int32_t, struct Js::ResolvedObject*) ,0x1026fa40L 
+
+[*] Found a write via @ [eax_10#14 + 8].d = 0 @ mem#9 -> mem#10 vars_written:<ssa <var class Js::StringBuilder<class ArenaAllocator>* eax_10> version 14> sinks:<ssa <var class Js::StringBuilder<class ArenaAllocator>* eax_10> version 14> a quadruple de-reference of this/ecx!
+ Js::RecyclablePixelArrayWalker::Get(int32_t, struct Js::ResolvedObject*) ,0x1026fa40L 
+
+[*] Found a write via @ [eax_10#14 + 0xc].d = 0 @ mem#10 -> mem#11 vars_written:<ssa <var class Js::StringBuilder<class ArenaAllocator>* eax_10> version 14> sinks:<ssa <var class Js::StringBuilder<class ArenaAllocator>* eax_10> version 14> a quadruple de-reference of this/ecx!
+ Js::RecyclablePixelArrayWalker::Get(int32_t, struct Js::ResolvedObject*) ,0x1026fa40L 
+
+[*] Found a write via @ [ebx#1 + 0xd6].b = eax_8#13.al @ mem#4 -> mem#5 vars_written:<ssa <var class Js::FunctionBody* ebx> version 1> sinks:<ssa <var class Js::FunctionBody* ebx> version 1> a double de-reference of this/ecx!
+ Js::InterpreterStackFrame::DoLoopBodyStart(uint8_t const*&, struct Js::OpLayoutI4 const*) ,0x1027b27bL 
+
+[*] Function Js::InterpreterStackFrame::OP_ProfiledLoopBodyStart<1,1>(uint8_t const*&, struct InterpreterStackFrame::OpLayoutI4 const*) @ 0x1027a690L has a callee Js::InterpreterStackFrame::DoLoopBodyStart(uint8_t const*&, struct Js::OpLayoutI4 const*) @ 0x1027b27bL which seems useful
+[*] Found 1104 functions with the return instruction criteria

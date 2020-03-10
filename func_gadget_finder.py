@@ -8,9 +8,9 @@ that you can only call functions with the same number of arguments as intended.
 This particular script attempts to find functions with the following criteria -
 a) Function's RVA is listed in the CFG table/is a valid indirect call location
 b) has 2 arguments , i.e have a retn 0x8 instruction at the end of the function
-c) there is a memory write in a memory location which is referenced as a double pointer either directly or indirectly 
+c) there is a memory write in a memory location which is referenced as a double/triple/quadruple pointer either directly or indirectly 
    via the 'this' pointer (ecx/rcx)
-   essentially any writes of the form  *(*(this+ index) )
+   essentially any writes of the form  *(*(this+ index) ) 
 d) any other function which satisfies only c) above but its is called from a function that satisfies a) AND b)
 
 note: This script currently doesn't rely on BN's analyzer to recognize CFG table. There is some uncertainty which
@@ -20,66 +20,156 @@ https://github.com/Vector35/binaryninja-api/issues/1542
 """
 import sys
 br = BinaryReader(bv)
-def func_gadget_find(each_func,found):
-    try:
-        i = 0
-        while(1):
-            memory_uses = each_func.mlil.ssa_form.get_ssa_memory_uses(i)
-            if (memory_uses == []) :
-                break
-            hit = 0
-            sink1 = []
-            sink2 = []
-            sink3 = []
-            for each_use in memory_uses:
-                if each_use.operation == MediumLevelILOperation.MLIL_SET_VAR_SSA:
-                    if len(each_use.vars_read) == 0:
-                        continue
-                    if len(each_use.vars_written) == 0:
-                        continue
-                    vars_read = each_use.vars_read[0]
-                    vars_written = each_use.vars_written[0]
-                    read_ins = each_func.mlil.get_ssa_var_definition(each_use.vars_read[0])        
-                    
-                    if 'ecx' not in str(vars_read.var):
-                        if read_ins == None:
-                            continue   
-                    # If memory is being read from ecx or another register that was previously assigned to ecx
-                    if str(read_ins.src) == 'ecx' or 'ecx' in str(vars_read.var):
+
+
+def get_reg_value_at_address(func,reg,address):
+    latest_ecx_val = 0
+    for each_ins in func.mlil.ssa_form.instructions:
+        if each_ins.address > address:
+            return latest_ecx_val
+        if each_ins.operation == MediumLevelILOperation.MLIL_SET_VAR_SSA:
+            if reg in str(each_ins.dest):
+                latest_ecx_val = each_ins.src
+
+def is_thiscall(each_func):
+    mlil = each_func.mlil_instructions
+    ecx_source = 0
+    ecx_dest = 0
+    for mlil_ins in mlil:
+        if mlil_ins.operation == MediumLevelILOperation.MLIL_SET_VAR :
+            if mlil_ins.src.value.reg == 'ecx':
+                if ecx_dest ==1:
+                    return 0
+                else:
+                    return 1
+            if mlil_ins.dest == 'ecx':
+                ecx_dest =1
+    return 0
+
+def func_gadget_find(each_func, recurse=0, ptr_level =0, sink1=[],sink2=[],sink3=[],sink4=[],sink5=[]):
+    
+    found = 0
+    #set limit to recursive callee scanning 
+    if recurse >1:
+                return
+    i = 0
+    while(1):
+        memory_uses = each_func.mlil.ssa_form.get_ssa_memory_uses(i)
+        if (memory_uses == []) :
+            break
+        hit = 0
+        for each_use in memory_uses:
+            fail=0
+            #VAR_SSA
+            if each_use.operation == MediumLevelILOperation.MLIL_SET_VAR_SSA:
+                if len(each_use.vars_read) == 0:
+                    continue
+                if len(each_use.vars_written) == 0:
+                    continue
+                vars_read = each_use.vars_read[0]
+                vars_written = each_use.vars_written[0]
+                try:
+                    read_ins = each_func.mlil.get_ssa_var_definition(each_use.vars_read[0]) 
+                except:
+                    pass #we catch this below 
+                # If memory is being read from ecx or another register that tracked ecx
+                try:
+                    if str(read_ins.src) == 'ecx':
                         sink1.append(vars_written)
-                    for sinks in sink1 :
-                        if vars_read == sinks:
-                            sink2.append(vars_written)
+                except:
+                    pass
+                try:
+                    if 'ecx' in str(vars_read.var):
+                        sink1.append(vars_written)
+                except:
+                    fail=1
+                if fail == 1:
+                    continue #both .var and .src are None, cant anlyze this operation                
+                for sinks in sink1 :
+                    if vars_read == sinks:
+                        sink2.append(vars_written)
+                for sinks in sink2:
+                    if vars_read == sinks:
+                        sink3.append(vars_written)
+                for sinks in sink3 :
+                    if vars_read == sinks:
+                        sink4.append(vars_written)
+                for sinks in sink4:
+                    if vars_read == sinks:
+                        sink5.append(vars_written)
+            #CALL_SSA
+            if each_use.operation == MediumLevelILOperation.MLIL_CALL_SSA:
+                latest_ecx_val = get_reg_value_at_address(each_func,'ecx',each_use.address)
+                if latest_ecx_val ==0:
+                    continue # this callee isnt taking arg(this) in via 'ecx'                   
+                if sink2 != []:
                     for sinks in sink2:
-                        if vars_read == sinks:
-                            sink3.append(vars_read)
-                
-                if each_use.operation == MediumLevelILOperation.MLIL_STORE_SSA:
-                    vars_written = each_use.dest.ssa_form.vars_read[0] # note: for MLIL_STORE_SSA vars_written is an empty []
+                        if latest_ecx_val ==sinks:
+                            ptr_level = 1
+                elif sink3 != []:                        
+                    for sinks in sink3:
+                        if latest_ecx_val ==sinks:
+                            ptr_level = 2
+                elif sink4 != []:                        
+                    for sinks in sink3:
+                        if latest_ecx_val ==sinks:
+                            ptr_level = 3
+                elif sink5 != []:                        
+                    for sinks in sink3:
+                        if latest_ecx_val ==sinks:
+                            ptr_level = 4                       
+                #bv.get_function_at expects a regular funciton type, not mlil function
+                if each_use.dest.value.value ==None:
+                    continue #indirect calls cannot be resolved yet
+                if bv.get_function_at(each_use.dest.value.value) == None:
+                    continue #in case of imported funcs in external lib   
+                if is_thiscall(bv.get_function_at(each_use.dest.value.value)) ==0:
+                    continue #not a thiscall
+                found = func_gadget_find(bv.get_function_at(each_use.dest.value.value), recurse+1, ptr_level)
+                if found ==1:
+                    print "[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,
+                        hex(each_func.start), bv.get_function_at(each_use.dest.value.value).symbol.full_name,
+                        hex(bv.get_function_at(each_use.dest.value.value).start))
+            #STORE_SSA
+            if each_use.operation == MediumLevelILOperation.MLIL_STORE_SSA:
+                if len(each_use.dest.ssa_form.vars_read)==0:
+                    continue
+                vars_written = each_use.dest.ssa_form.vars_read[0] # note: for MLIL_STORE_SSA vars_written is an empty []
+                if ptr_level ==1:
+                    for sinks in sink2:
+                        if vars_written ==sinks:
+                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
+                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
+                            found =1
+                            break
+                elif ptr_level ==2 or ptr_level ==3 or ptr_level ==4:
+                    for sinks in sink1:
+                        if vars_written ==sinks:
+                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
+                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
+                            found =1
+                            break
+                elif ptr_level ==0:    
                     for sinks in sink3:
                         if vars_written ==sinks:
-                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s , %s \n"%(each_use, vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
-                            hit =1
-                            found[0] =1          
+                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
+                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
+                            found =1
                             break
-            if hit == 1:
-                break
-            i=i+1
-    except:
-        pass
-
-def func_search(each_func):    
-        retn_ins = 0
-        for each_ins in each_func.instructions:
-            if "retn" not in str(each_ins[0][0]):
-                continue
-            if not len(each_ins[0]) >2:
-                continue
-            if "0x8" not in str(each_ins[0][2]):
-                continue
-            retn_ins = 1
-            break
-        return retn_ins
+                    for sinks in sink4:
+                        if vars_written ==sinks:
+                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a triple de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
+                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
+                            found =1
+                            break
+                    for sinks in sink5:
+                        if vars_written ==sinks:
+                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a quadruple de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
+                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
+                            found =1
+                            break
+        i=i+1
+    return found
 
 def parse_data_view(structure, address):
     PE = StructuredDataView(bv, structure, address)
@@ -148,19 +238,11 @@ else:
     print "[*] Number of functions within the CFG Table dont match Function count within the CFG headers"
 
 retn_func_count = 0
-#Filter those functions with "retn 0x8" instructions
 for each_func in CFG_funcs:
 #for each_func in bv.functions:
-    #if func_search(each_func) == 1:        
+#Filter those functions with "retn 0x8" instructions
     if each_func.stack_adjustment.value == 8:
         retn_func_count+=1
-        found =[0]
-        func_gadget_find(each_func,found)#check the function for gadgets
-        for each_callee in each_func.callees:
-            found[0] =0
-            func_gadget_find(each_callee,found)#check each callee for gadgets
-            if found[0] ==1:
-                print "[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,
-                    hex(each_func.start), each_callee.symbol.full_name,hex(each_callee.start))
+        found = func_gadget_find(each_func)#check the function for gadgets
 
 print "[*] Found %s functions with the return instruction criteria"%(retn_func_count)
