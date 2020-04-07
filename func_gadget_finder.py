@@ -22,10 +22,23 @@ import sys
 br = BinaryReader(bv)
 
 
+# def get_reg_value_at_address(func,reg,address):
+#     latest_ecx_val = 0
+#     for each_ins in func.mlil.ssa_form.instructions:
+#         if each_ins.address > address:
+#             return latest_ecx_val
+#         if each_ins.operation == MediumLevelILOperation.MLIL_SET_VAR_SSA:
+#             if reg in str(each_ins.dest):
+#                 latest_ecx_val = each_ins.src
+
 def get_reg_value_at_address(func,reg,address):
+    bbl = func.get_basic_block_at(address)
+    bbl_address = bbl.start
     latest_ecx_val = 0
     for each_ins in func.mlil.ssa_form.instructions:
-        if each_ins.address > address:
+        if each_ins.address<bbl.start:
+            continue
+        if each_ins.address == address:
             return latest_ecx_val
         if each_ins.operation == MediumLevelILOperation.MLIL_SET_VAR_SSA:
             if reg in str(each_ins.dest):
@@ -79,6 +92,11 @@ def func_gadget_find(each_func, recurse=0, ptr_level =0, sink1=[],sink2=[],sink3
                 except:
                     pass
                 try:
+                    if 'ecx' in str(read_ins.src.value):
+                        sink1.append(vars_written)
+                except:
+                    pass
+                try:
                     if 'ecx' in str(vars_read.var):
                         sink1.append(vars_written)
                 except:
@@ -111,11 +129,11 @@ def func_gadget_find(each_func, recurse=0, ptr_level =0, sink1=[],sink2=[],sink3
                         if latest_ecx_val ==sinks:
                             ptr_level = 2
                 elif sink4 != []:                        
-                    for sinks in sink3:
+                    for sinks in sink4:
                         if latest_ecx_val ==sinks:
                             ptr_level = 3
                 elif sink5 != []:                        
-                    for sinks in sink3:
+                    for sinks in sink5:
                         if latest_ecx_val ==sinks:
                             ptr_level = 4                       
                 #bv.get_function_at expects a regular funciton type, not mlil function
