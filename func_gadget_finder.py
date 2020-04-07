@@ -42,7 +42,11 @@ def get_reg_value_at_address(func,reg,address):
             return latest_ecx_val
         if each_ins.operation == MediumLevelILOperation.MLIL_SET_VAR_SSA:
             if reg in str(each_ins.dest):
-                latest_ecx_val = each_ins.src
+                try:
+                    latest_ecx_val = each_ins.vars_read[0]
+                except:
+                    print each_ins.vars_read
+                    latest_ecx_val = each_ins.vars_read[0]
 
 def is_thiscall(each_func):
     mlil = each_func.mlil_instructions
@@ -102,7 +106,7 @@ def func_gadget_find(each_func, recurse=0, ptr_level =0, sink1=[],sink2=[],sink3
                 except:
                     fail=1
                 if fail == 1:
-                    continue #both .var and .src are None, cant anlyze this operation                
+                    continue #both .var and .src are None, cant anlyze this operation
                 for sinks in sink1 :
                     if vars_read == sinks:
                         sink2.append(vars_written)
@@ -124,18 +128,20 @@ def func_gadget_find(each_func, recurse=0, ptr_level =0, sink1=[],sink2=[],sink3
                     for sinks in sink2:
                         if latest_ecx_val ==sinks:
                             ptr_level = 1
-                elif sink3 != []:                        
+                if sink3 != []:
                     for sinks in sink3:
                         if latest_ecx_val ==sinks:
                             ptr_level = 2
-                elif sink4 != []:                        
+                if sink4 != []:
                     for sinks in sink4:
                         if latest_ecx_val ==sinks:
                             ptr_level = 3
-                elif sink5 != []:                        
+                if sink5 != []:
                     for sinks in sink5:
                         if latest_ecx_val ==sinks:
-                            ptr_level = 4                       
+                            ptr_level = 4
+                if ptr_level ==0:
+                    continue
                 #bv.get_function_at expects a regular funciton type, not mlil function
                 if each_use.dest.value.value ==None:
                     continue #indirect calls cannot be resolved yet
@@ -143,8 +149,8 @@ def func_gadget_find(each_func, recurse=0, ptr_level =0, sink1=[],sink2=[],sink3
                     continue #in case of imported funcs in external lib   
                 if is_thiscall(bv.get_function_at(each_use.dest.value.value)) ==0:
                     continue #not a thiscall
-                found = func_gadget_find(bv.get_function_at(each_use.dest.value.value), recurse+1, ptr_level)
-                if found ==1:
+                found_return = func_gadget_find(bv.get_function_at(each_use.dest.value.value), recurse+1, ptr_level)
+                if found_return !=0 and found_return!=None:
                     print "[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,
                         hex(each_func.start), bv.get_function_at(each_use.dest.value.value).symbol.full_name,
                         hex(bv.get_function_at(each_use.dest.value.value).start))
@@ -158,33 +164,33 @@ def func_gadget_find(each_func, recurse=0, ptr_level =0, sink1=[],sink2=[],sink3
                         if vars_written ==sinks:
                             print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
                                 vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
-                            found =1
+                            found+=1
                             break
                 elif ptr_level ==2 or ptr_level ==3 or ptr_level ==4:
                     for sinks in sink1:
                         if vars_written ==sinks:
                             print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
                                 vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
-                            found =1
+                            found+=1
                             break
                 elif ptr_level ==0:    
                     for sinks in sink3:
                         if vars_written ==sinks:
                             print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
                                 vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
-                            found =1
+                            found+=1
                             break
                     for sinks in sink4:
                         if vars_written ==sinks:
                             print "[*] Found a write via @ %s vars_written:%s sinks:%s a triple de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
                                 vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
-                            found =1
+                            found+=1
                             break
                     for sinks in sink5:
                         if vars_written ==sinks:
                             print "[*] Found a write via @ %s vars_written:%s sinks:%s a quadruple de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
                                 vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
-                            found =1
+                            found+=1
                             break
         i=i+1
     return found
