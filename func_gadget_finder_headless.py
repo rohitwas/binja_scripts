@@ -41,9 +41,9 @@ def func_gadget_find(each_func,found):
                     vars_written = each_use.dest.ssa_form.vars_read[0] 
                     for sinks in sink3:
                         if vars_written ==sinks:
-                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a \
+                            print("[*] Found a write via @ %s vars_written:%s sinks:%s a \
                             double de-reference of this/ecx!\n %s , %s \n"%(each_use, 
-                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
+                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start)))
                             hit =1
                             found[0] =1          
                             break
@@ -78,13 +78,13 @@ def byte_swap(i):
 
 
 def scan_binary(bin):
-    print "Analyzing %s"%(bin)
+    print("Analyzing %s"%(bin))
     bv = BinaryViewType["PE"].open(bin)
     bv.update_analysis_and_wait()
     br = BinaryReader(bv)
     #Check if BN was able to parse CFG headers successfully?
-    data_keys = bv.data_vars.keys()
-    data_vals = bv.data_vars.values()
+    data_keys = list(bv.data_vars.keys())
+    data_vals = list(bv.data_vars.values())
     lcte_index = 0
     cfg_index = 0
     header_index = 0
@@ -119,7 +119,7 @@ def scan_binary(bin):
         GuardCFFunctionTable_virtualAddress = byte_swap(GuardCFFunctionTable.virtualAddress)#RVA
         GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
     else:
-        print "Couldnt Find PE32 header, exiting!"
+        print("Couldnt Find PE32 header, exiting!")
         sys.exit()
 
     br.offset = GuardCFFunctionTable_virtualAddress
@@ -136,9 +136,9 @@ def scan_binary(bin):
         CFG_funcs.append(bv.get_function_at(bv.start + CFG_RVA))
 
     if GuardCFFunctionTable_size == len(CFG_funcs):
-        print "[*] Found %s CFG Valid Functions"%(len(CFG_funcs))
+        print("[*] Found %s CFG Valid Functions"%(len(CFG_funcs)))
     else:
-        print "[*] Number of functions within the CFG Table dont match Function count within the CFG headers"
+        print("[*] Number of functions within the CFG Table dont match Function count within the CFG headers")
 
     retn_func_count = 0
     #Filter those functions with "retn 0x8" instructions
@@ -153,10 +153,10 @@ def scan_binary(bin):
                 found[0] =0
                 func_gadget_find(each_callee,found)#check each callee for gadgets
                 if found[0] ==1:
-                    print "[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,
-                        hex(each_func.start), each_callee.symbol.full_name,hex(each_callee.start))
+                    print("[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,
+                        hex(each_func.start), each_callee.symbol.full_name,hex(each_callee.start)))
 
-    print "[*] Found %s functions with the return instruction criteria"%(retn_func_count)
+    print("[*] Found %s functions with the return instruction criteria"%(retn_func_count))
 # loaded modules in IE 32 bit renderer process
 binary_list = ['C:\\ProgramData\\Microsoft\\Windows Defender\\platform\\4.18.1911.3-0\\X86\\MpOav.dll', 
 'C:\\Windows\\SysWOW64\\jscript.dll', 'C:\\Windows\\SysWOW64\\efswrt.dll', 
@@ -201,7 +201,7 @@ binary_list = ['C:\\ProgramData\\Microsoft\\Windows Defender\\platform\\4.18.191
    'C:\\Windows\\SysWOW64\\NSI.dll', 'C:\\Windows\\SysWOW64\\ntdll.dll']
 
 for each_bin in binary_list:
-    print "\n\n[*] Analyzing Binary %s"%(each_bin)
+    print("\n\n[*] Analyzing Binary %s"%(each_bin))
     scan_binary(each_bin)
 
 

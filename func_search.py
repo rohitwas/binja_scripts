@@ -25,7 +25,7 @@ for each_func in funcs:
         if "0x8" not in str(each_ins[0][2]):
         	continue
         retns.append({str(each_func.symbol.full_name) : hex(each_func.start) })
-print retns
+print(retns)
 
 '''
 example ouput

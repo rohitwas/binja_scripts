@@ -21,16 +21,6 @@ https://github.com/Vector35/binaryninja-api/issues/1542
 import sys
 br = BinaryReader(bv)
 
-
-# def get_reg_value_at_address(func,reg,address):
-#     latest_ecx_val = 0
-#     for each_ins in func.mlil.ssa_form.instructions:
-#         if each_ins.address > address:
-#             return latest_ecx_val
-#         if each_ins.operation == MediumLevelILOperation.MLIL_SET_VAR_SSA:
-#             if reg in str(each_ins.dest):
-#                 latest_ecx_val = each_ins.src
-
 def get_reg_value_at_address(func,reg,address):
     bbl = func.get_basic_block_at(address)
     bbl_address = bbl.start
@@ -45,8 +35,9 @@ def get_reg_value_at_address(func,reg,address):
                 try:
                     latest_ecx_val = each_ins.vars_read[0]
                 except:
-                    print each_ins.vars_read
-                    latest_ecx_val = each_ins.vars_read[0]
+                    #vars_read doesnt exist/cant be parsed, bailout
+                    return 0
+
 
 def is_thiscall(each_func):
     mlil = each_func.mlil_instructions
@@ -124,23 +115,24 @@ def func_gadget_find(each_func, recurse=0, ptr_level =0, sink1=[],sink2=[],sink3
                 latest_ecx_val = get_reg_value_at_address(each_func,'ecx',each_use.address)
                 if latest_ecx_val ==0:
                     continue # this callee isnt taking arg(this) in via 'ecx'                   
+                ptr_level_callee = 0
                 if sink2 != []:
                     for sinks in sink2:
                         if latest_ecx_val ==sinks:
-                            ptr_level = 1
+                            ptr_level_callee = 1
                 if sink3 != []:
                     for sinks in sink3:
                         if latest_ecx_val ==sinks:
-                            ptr_level = 2
+                            ptr_level_callee = 2
                 if sink4 != []:
                     for sinks in sink4:
                         if latest_ecx_val ==sinks:
-                            ptr_level = 3
+                            ptr_level_callee = 3
                 if sink5 != []:
                     for sinks in sink5:
                         if latest_ecx_val ==sinks:
-                            ptr_level = 4
-                if ptr_level ==0:
+                            ptr_level_callee = 4
+                if ptr_level_callee ==0:
                     continue
                 #bv.get_function_at expects a regular funciton type, not mlil function
                 if each_use.dest.value.value ==None:
@@ -149,11 +141,11 @@ def func_gadget_find(each_func, recurse=0, ptr_level =0, sink1=[],sink2=[],sink3
                     continue #in case of imported funcs in external lib   
                 if is_thiscall(bv.get_function_at(each_use.dest.value.value)) ==0:
                     continue #not a thiscall
-                found_return = func_gadget_find(bv.get_function_at(each_use.dest.value.value), recurse+1, ptr_level)
+                found_return = func_gadget_find(bv.get_function_at(each_use.dest.value.value), recurse+1, ptr_level_callee)
                 if found_return !=0 and found_return!=None:
-                    print "[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,
+                    print("[*] Function %s @ %s has a callee %s @ %s which seems useful"%(each_func.symbol.full_name,
                         hex(each_func.start), bv.get_function_at(each_use.dest.value.value).symbol.full_name,
-                        hex(bv.get_function_at(each_use.dest.value.value).start))
+                        hex(bv.get_function_at(each_use.dest.value.value).start)))
             #STORE_SSA
             if each_use.operation == MediumLevelILOperation.MLIL_STORE_SSA:
                 if len(each_use.dest.ssa_form.vars_read)==0:
@@ -162,34 +154,34 @@ def func_gadget_find(each_func, recurse=0, ptr_level =0, sink1=[],sink2=[],sink3
                 if ptr_level ==1:
                     for sinks in sink2:
                         if vars_written ==sinks:
-                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
-                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
+                            print("[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
+                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start)))
                             found+=1
                             break
                 elif ptr_level ==2 or ptr_level ==3 or ptr_level ==4:
                     for sinks in sink1:
                         if vars_written ==sinks:
-                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
-                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
+                            print("[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
+                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start)))
                             found+=1
                             break
                 elif ptr_level ==0:    
                     for sinks in sink3:
                         if vars_written ==sinks:
-                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
-                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
+                            print("[*] Found a write via @ %s vars_written:%s sinks:%s a double de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
+                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start)))
                             found+=1
                             break
                     for sinks in sink4:
                         if vars_written ==sinks:
-                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a triple de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
-                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
+                            print("[*] Found a write via @ %s vars_written:%s sinks:%s a triple de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
+                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start)))
                             found+=1
                             break
                     for sinks in sink5:
                         if vars_written ==sinks:
-                            print "[*] Found a write via @ %s vars_written:%s sinks:%s a quadruple de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
-                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start))
+                            print("[*] Found a write via @ %s vars_written:%s sinks:%s a quadruple de-reference of this/ecx!\n %s ,%s \n"%(each_use, 
+                                vars_written,sinks, each_func.symbol.full_name, hex(each_func.start)))
                             found+=1
                             break
         i=i+1
@@ -205,8 +197,8 @@ def byte_swap(i):
     return struct.unpack("<I", struct.pack(">I", temp))[0]
 
 #Check if BN was able to parse CFG headers successfully?
-data_keys = bv.data_vars.keys()
-data_vals = bv.data_vars.values()
+data_keys = list(bv.data_vars.keys())
+data_vals = list(bv.data_vars.values())
 lcte_index = 0
 cfg_index = 0
 header_index = 0
@@ -240,7 +232,7 @@ elif header_index != 0:
     GuardCFFunctionTable_virtualAddress = byte_swap(GuardCFFunctionTable.virtualAddress)#RVA
     GuardCFFunctionTable_size = byte_swap(GuardCFFunctionTable.size)
 else:
-    print "Couldnt Find PE32 header, exiting!"
+    print("Couldnt Find PE32 header, exiting!")
     sys.exit()
 
 br.offset = GuardCFFunctionTable_virtualAddress
@@ -257,9 +249,9 @@ for i in range(0, GuardCFFunctionTable_size):
     CFG_funcs.append(bv.get_function_at(bv.start + CFG_RVA))
 
 if GuardCFFunctionTable_size == len(CFG_funcs):
-    print "[*] Found %s CFG Valid Functions"%(len(CFG_funcs))
+    print("[*] Found %s CFG Valid Functions"%(len(CFG_funcs)))
 else:
-    print "[*] Number of functions within the CFG Table dont match Function count within the CFG headers"
+    print("[*] Number of functions within the CFG Table dont match Function count within the CFG headers")
 
 retn_func_count = 0
 for each_func in CFG_funcs:
@@ -269,4 +261,4 @@ for each_func in CFG_funcs:
         retn_func_count+=1
         found = func_gadget_find(each_func)#check the function for gadgets
 
-print "[*] Found %s functions with the return instruction criteria"%(retn_func_count)
+print("[*] Found %s functions with the return instruction criteria"%(retn_func_count))

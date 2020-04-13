@@ -56,10 +56,10 @@ for funcs in bv.functions:
                         break
                     else:
                         count+=1
-                        print "Found a thiscall at %s"%(funcs.symbol.full_name)
+                        print("Found a thiscall at %s"%(funcs.symbol.full_name))
                         ecx_dest = 0
                         break
                 if mlil_ins.dest == 'ecx':
                     ecx_dest =1
-print "Found a total of %s functions with thicall misidentified"%(count)
+print("Found a total of %s functions with thicall misidentified"%(count))
 

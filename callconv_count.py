@@ -16,7 +16,7 @@ for i in bv.functions:
     if "thiscall" in str(s2):
         thiscall_count+=1
 
-print "Found stdcall: %s\n cdecl: %s\n fastcall: %s\n thiscall: %s\n "%(stdcall_count,cdecl_count,fastcall_count,thiscall_count)
+print("Found stdcall: %s\n cdecl: %s\n fastcall: %s\n thiscall: %s\n "%(stdcall_count,cdecl_count,fastcall_count,thiscall_count))
 
 
 """
