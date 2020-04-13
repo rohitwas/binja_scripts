@@ -1,22 +1,23 @@
 stdcall_count = 0
 cdecl_count = 0
 fastcall_count = 0
-thiscall_count= 0
+thiscall_count = 0
 
 for i in bv.functions:
     #s = i.type_tokens
     s = i.calling_convention.name
     s2 = "".join([str(elem) for elem in s])
     if "stdcall" in str(s2):
-        stdcall_count+=1
+        stdcall_count += 1
     if "cdecl" in str(s2):
-        cdecl_count+=1
+        cdecl_count += 1
     if "fastcall" in str(s2):
-        fastcall_count+=1       
+        fastcall_count += 1
     if "thiscall" in str(s2):
-        thiscall_count+=1
+        thiscall_count += 1
 
-print("Found stdcall: %s\n cdecl: %s\n fastcall: %s\n thiscall: %s\n "%(stdcall_count,cdecl_count,fastcall_count,thiscall_count))
+print("Found stdcall: %s\n cdecl: %s\n fastcall: %s\n thiscall: %s\n " %
+      (stdcall_count, cdecl_count, fastcall_count, thiscall_count))
 
 
 """
@@ -45,5 +46,5 @@ stdcall: 2723
 cdecl: 469
 fastcall: 44
 thiscall: 5294
- 
+
 """
