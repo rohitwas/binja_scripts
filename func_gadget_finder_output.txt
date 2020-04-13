@@ -1,4 +1,4 @@
-func_gadget_finder2 output on jscript9.dll
+sample func_gadget_finder output on jscript9.dll
 
 [*] Found 7298 CFG Valid Functions
 [*] Found a write via @ [eax_7#12 + 0x11b0].b = [eax_7#12 + 0x11b0].b @ mem#10 | 0x11 @ mem#10 -> mem#11 vars_written:<ssa <var int32_t eax_7> version 12> sinks:<ssa <var int32_t eax_7> version 12> a triple de-reference of this/ecx!
